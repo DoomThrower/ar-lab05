@@ -1,0 +1,29 @@
+import org.apache.spark._
+import org.apache.spark.graphx._
+import org.apache.spark.graphx.lib._
+import org.apache.spark.graphx.util.GraphGenerators
+
+
+/** Connected components algorithm. */
+object SparkConnectedComponents {
+	def main(args: Array[String]) {
+		if (args.length < 1) {
+			System.err.println("Usage: SparkConnectedComponents <file>")
+			System.exit(1)
+		}
+		val fname = args(0)
+
+		val conf = new SparkConf()
+		val sc = new SparkContext(conf.setAppName("SparkConnectedComponents(" + fname + ")"))
+		
+		// Load the graph
+		val graph = GraphLoader.edgeListFile(sc, fname)
+
+		val cc = graph.connectedComponents().vertices
+		println("======================================")
+        println("|      Connected Components          |")
+        println("======================================")
+		println(cc.collect().sortBy(_._2).mkString("\n"))
+        sc.stop()
+	}
+}
