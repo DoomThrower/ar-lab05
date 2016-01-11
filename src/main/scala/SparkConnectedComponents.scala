@@ -19,11 +19,37 @@ object SparkConnectedComponents {
 		// Load the graph
 		val graph = GraphLoader.edgeListFile(sc, fname)
 
-		val cc = graph.connectedComponents().vertices
-		println("======================================")
-        println("|      Connected Components          |")
-        println("======================================")
-		println(cc.collect().sortBy(_._2).mkString("\n"))
-        sc.stop()
+		def vprog(vertexId: VertexId, value: Int, message: Int): Int = {
+			println("Vertex " + vertexId + " gets message " + message)
+			if (message == Int.MaxValue) {
+				val toRet = vertexId.toInt
+				println("Vertex " + vertexId + " returns " + toRet)
+				toRet
+			} else {
+				val toRet = value min message
+				println("Vertex " + vertexId + " returns " + toRet)
+				toRet
+			}
+		}
+
+		def sendMsg(triplet: EdgeTriplet[Int, Int]): Iterator[(VertexId, Int)] = {
+			if (triplet.dstAttr <= triplet.srcAttr) {
+				println("Vertex " + triplet.srcId + " does not send anything to " + triplet.dstId)
+				Iterator.empty
+			} else {
+				println("Vertex " + triplet.srcId + " sends to " + triplet.dstId + " value = " + triplet.srcAttr)
+				Iterator((triplet.dstId, triplet.srcAttr))
+			}
+		}
+
+		def mergeMsg(msg1: Int, msg2: Int): Int = msg1 min msg2
+
+		val minGraph =
+			graph.pregel(initialMsg = Int.MaxValue, activeDirection = EdgeDirection.Out)(
+				vprog, sendMsg, mergeMsg)
+
+		minGraph.vertices.collect().foreach{
+			case (vertexId, value) => println(vertexId + " = " + value)
+		}
 	}
 }
